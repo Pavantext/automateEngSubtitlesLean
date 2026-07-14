@@ -1,0 +1,32 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated pipeline output
+out_v4_1_lean/
+out_*/
+uploads/
+jobs/
+
+# OS / editor junk
+__MACOSX/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Node (frontend build, if any)
+node_modules/
+dist/

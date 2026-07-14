@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1F4E79" />
+  <title>Subtitle Review Pipeline</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #1a2233;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --brand: #1F4E79;
+      --brand-2: #2f6db5;
+      --ok: #15803d;
+      --err: #b91c1c;
+      --shadow: 0 6px 24px rgba(16, 33, 60, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e1420;
+        --card: #161f30;
+        --text: #e7ecf5;
+        --muted: #94a3b8;
+        --border: #263248;
+        --brand: #3b82f6;
+        --brand-2: #60a5fa;
+        --shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 64px; }
+    header.top { text-align: center; margin: 8px 0 20px; }
+    header.top h1 { font-size: 1.35rem; margin: 0 0 4px; }
+    header.top p { color: var(--muted); margin: 0; font-size: 0.9rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+    .hint { color: var(--muted); font-size: 0.8rem; margin: 4px 0 0; font-weight: 400; }
+    input[type="password"], input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus, select:focus { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+    .field { margin-bottom: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row .field { flex: 1 1 140px; margin-bottom: 0; }
+    button {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(180deg, var(--brand-2), var(--brand));
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.05s ease, opacity 0.2s;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 26px 16px;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .dropzone.drag { border-color: var(--brand-2); background: rgba(47,109,181,0.06); }
+    .dropzone strong { color: var(--text); display: block; margin-bottom: 4px; }
+    .filename { color: var(--brand-2); font-weight: 600; word-break: break-all; }
+    .msg { font-size: 0.9rem; margin-top: 10px; min-height: 1.2em; }
+    .msg.err { color: var(--err); }
+    .msg.ok { color: var(--ok); }
+    .log {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+      background: rgba(47,109,181,0.12); color: var(--brand-2);
+    }
+    .status-pill.done { background: rgba(21,128,61,0.14); color: var(--ok); }
+    .status-pill.error { background: rgba(185,28,28,0.14); color: var(--err); }
+    .spinner {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid currentColor; border-top-color: transparent;
+      animation: spin 0.7s linear infinite; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .downloads { display: grid; gap: 10px; margin-top: 16px; }
+    a.dl {
+      display: flex; align-items: center; justify-content: space-between;
+      text-decoration: none; color: var(--text); font-weight: 600;
+      padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--bg);
+    }
+    a.dl span.arrow { color: var(--brand-2); }
+    .hidden { display: none !important; }
+    .linkbtn {
+      background: none; border: none; color: var(--muted); font-weight: 600;
+      width: auto; padding: 8px; font-size: 0.85rem;
+    }
+    footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>Telugu → English Subtitle Review</h1>
+      <p>Upload a <code>.sbv</code>/<code>.srt</code> · get an AI review workbook</p>
+    </header>
+
+    <!-- LOGIN -->
+    <section id="loginCard" class="card">
+      <div class="field">
+        <label for="password">Access password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Enter the app password" />
+        <p class="hint">Set by the server owner (the <code>APP_PASSWORD</code> environment variable).</p>
+      </div>
+      <button id="loginBtn">Unlock</button>
+      <p id="loginMsg" class="msg"></p>
+    </section>
+
+    <!-- APP -->
+    <section id="appCard" class="card hidden">
+      <form id="uploadForm">
+        <div class="field">
+          <label>Subtitle file</label>
+          <div id="dropzone" class="dropzone">
+            <strong>Tap to choose or drop a file</strong>
+            <span>.sbv or .srt · UTF-8 · up to 2 MB</span>
+            <div id="fileName" class="filename" style="margin-top:8px;"></div>
+          </div>
+          <input id="fileInput" type="file" accept=".sbv,.srt,text/plain" class="hidden" />
+        </div>
+
+        <div class="row" style="margin-bottom:16px;">
+          <div class="field">
+            <label for="chunkSize">Chunk size</label>
+            <input id="chunkSize" type="number" min="5" max="200" value="40" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="overlap">Overlap</label>
+            <input id="overlap" type="number" min="0" max="20" value="3" inputmode="numeric" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="model">Azure deployment <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input id="model" type="text" placeholder="Leave blank to use server default" />
+          <p class="hint">Overrides <code>AZURE_OPENAI_DEPLOYMENT</code> for this run only.</p>
+        </div>
+
+        <button id="runBtn" type="submit">Translate</button>
+        <p id="uploadMsg" class="msg"></p>
+      </form>
+    </section>
+
+    <!-- JOB STATUS -->
+    <section id="jobCard" class="card hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <strong id="jobTitle">Translation job</strong>
+        <span id="statusPill" class="status-pill"><span class="spinner"></span> queued</span>
+      </div>
+      <div id="log" class="log">Starting…</div>
+      <div id="downloads" class="downloads hidden"></div>
+      <button id="newJobBtn" class="linkbtn hidden" type="button">← Start another file</button>
+    </section>
+
+    <div style="text-align:center;">
+      <button id="logoutBtn" class="linkbtn hidden" type="button">Lock app</button>
+    </div>
+    <footer>Runs on Azure OpenAI · Human review still required before publishing.</footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const KEY = "subtitle_app_pw";
+    let password = sessionStorage.getItem(KEY) || "";
+    let pollTimer = null;
+
+    function authHeaders(extra = {}) {
+      return { "X-App-Password": password, ...extra };
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, { ...opts, headers: authHeaders(opts.headers || {}) });
+      return res;
+    }
+
+    // ---- Login ----
+    async function tryLogin(pw) {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "X-App-Password": pw },
+      });
+      return res.ok;
+    }
+
+    async function doLogin() {
+      const pw = $("password").value.trim();
+      const msg = $("loginMsg");
+      msg.className = "msg";
+      msg.textContent = "";
+      if (!pw) { msg.className = "msg err"; msg.textContent = "Enter the password."; return; }
+      $("loginBtn").disabled = true;
+      try {
+        const ok = await tryLogin(pw);
+        if (!ok) { msg.className = "msg err"; msg.textContent = "Incorrect password."; return; }
+        password = pw;
+        sessionStorage.setItem(KEY, pw);
+        showApp();
+      } catch (e) {
+        msg.className = "msg err";
+        msg.textContent = "Could not reach the server.";
+      } finally {
+        $("loginBtn").disabled = false;
+      }
+    }
+
+    function showApp() {
+      $("loginCard").classList.add("hidden");
+      $("appCard").classList.remove("hidden");
+      $("logoutBtn").classList.remove("hidden");
+    }
+
+    function logout() {
+      sessionStorage.removeItem(KEY);
+      password = "";
+      if (pollTimer) clearInterval(pollTimer);
+      location.reload();
+    }
+
+    // ---- File selection ----
+    const dz = $("dropzone");
+    dz.addEventListener("click", () => $("fileInput").click());
+    $("fileInput").addEventListener("change", () => showFile($("fileInput").files[0]));
+    ["dragover", "dragenter"].forEach((ev) =>
+      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); })
+    );
+    ["dragleave", "drop"].forEach((ev) =>
+      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); })
+    );
+    dz.addEventListener("drop", (e) => {
+      const f = e.dataTransfer.files[0];
+      if (f) { $("fileInput").files = e.dataTransfer.files; showFile(f); }
+    });
+    function showFile(f) {
+      $("fileName").textContent = f ? f.name : "";
+    }
+
+    // ---- Submit job ----
+    $("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = $("fileInput").files[0];
+      const msg = $("uploadMsg");
+      msg.className = "msg";
+      msg.textContent = "";
+      if (!file) { msg.className = "msg err"; msg.textContent = "Choose a subtitle file first."; return; }
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("chunk_size", $("chunkSize").value || "40");
+      fd.append("overlap", $("overlap").value || "3");
+      fd.append("model", $("model").value.trim());
+
+      $("runBtn").disabled = true;
+      try {
+        const res = await api("/api/jobs", { method: "POST", body: fd });
+        if (res.status === 401) { logout(); return; }
+        const data = await res.json();
+        if (!res.ok) {
+          msg.className = "msg err";
+          msg.textContent = data.detail || "Upload failed.";
+          return;
+        }
+        startWatching(data);
+      } catch (err) {
+        msg.className = "msg err";
+        msg.textContent = "Network error. Try again.";
+      } finally {
+        $("runBtn").disabled = false;
+      }
+    });
+
+    // ---- Poll job ----
+    const ARTIFACT_LABELS = {
+      workbook: "Review workbook (.xlsx)",
+      brief: "Discourse brief (.md)",
+      raw: "Raw translation (.json)",
+    };
+
+    function startWatching(job) {
+      $("appCard").classList.add("hidden");
+      $("jobCard").classList.remove("hidden");
+      $("downloads").classList.add("hidden");
+      $("downloads").innerHTML = "";
+      $("newJobBtn").classList.add("hidden");
+      $("jobTitle").textContent = job.filename + (job.cue_count ? ` · ${job.cue_count} cues` : "");
+      renderStatus(job);
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(() => pollJob(job.id), 1600);
+      pollJob(job.id);
+    }
+
+    async function pollJob(id) {
+      try {
+        const res = await api(`/api/jobs/${id}`);
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) return;
+        const job = await res.json();
+        renderStatus(job);
+        if (job.status === "done" || job.status === "error") {
+          clearInterval(pollTimer);
+          $("newJobBtn").classList.remove("hidden");
+          if (job.status === "done") renderDownloads(id, job.artifacts);
+        }
+      } catch (_) { /* keep polling */ }
+    }
+
+    function renderStatus(job) {
+      const pill = $("statusPill");
+      const log = $("log");
+      if (job.progress && job.progress.length) {
+        log.textContent = job.progress.join("\n");
+        log.scrollTop = log.scrollHeight;
+      }
+      pill.classList.remove("done", "error");
+      if (job.status === "done") {
+        pill.classList.add("done");
+        pill.innerHTML = "✓ done";
+      } else if (job.status === "error") {
+        pill.classList.add("error");
+        pill.innerHTML = "✕ error";
+      } else {
+        pill.innerHTML = `<span class="spinner"></span> ${job.status}`;
+      }
+    }
+
+    function renderDownloads(id, artifacts) {
+      const box = $("downloads");
+      box.innerHTML = "";
+      const order = ["workbook", "brief", "raw"];
+      order.filter((k) => artifacts.includes(k)).forEach((k) => {
+        const a = document.createElement("a");
+        a.className = "dl";
+        a.href = `/api/jobs/${id}/files/${k}`;
+        // Force the auth header via fetch-download since <a> can't send headers.
+        a.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const res = await api(a.href);
+          if (!res.ok) return;
+          const blob = await res.blob();
+          const cd = res.headers.get("Content-Disposition") || "";
+          const m = cd.match(/filename="?([^"]+)"?/);
+          const url = URL.createObjectURL(blob);
+          const tmp = document.createElement("a");
+          tmp.href = url;
+          tmp.download = m ? m[1] : k;
+          tmp.click();
+          URL.revokeObjectURL(url);
+        });
+        a.innerHTML = `<span>${ARTIFACT_LABELS[k] || k}</span><span class="arrow">Download ↓</span>`;
+        box.appendChild(a);
+      });
+      box.classList.remove("hidden");
+    }
+
+    $("newJobBtn").addEventListener("click", () => {
+      $("jobCard").classList.add("hidden");
+      $("appCard").classList.remove("hidden");
+      $("uploadForm").reset();
+      $("fileName").textContent = "";
+    });
+
+    // ---- Wire up ----
+    $("loginBtn").addEventListener("click", doLogin);
+    $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+    $("logoutBtn").addEventListener("click", logout);
+
+    // Auto-unlock if we already have a valid password this session.
+    (async () => {
+      if (password && await tryLogin(password)) showApp();
+    })();
+  </script>
+</body>
+</html>

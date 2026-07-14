@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config *)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(rm -rf \"__MACOSX\")",
+      "Bash(rm -rf \"automateEngSubtitlesLean\")",
+      "Bash(rm -rf .venv)",
+      "Bash(python -m venv .venv)",
+      "Bash(.venv/Scripts/python.exe -m pip install --quiet --upgrade pip)",
+      "Bash(.venv/Scripts/python.exe -m pip install -r requirements.txt)",
+      "Bash(.venv/Scripts/python.exe -c \"import pipeline; c=pipeline.parse_source\\(__import__\\('pathlib'\\).Path\\('CH 05 _EP 11.sbv'\\)\\); print\\('parsed cues:', len\\(c\\)\\); print\\('first:', c[0].number, c[0].timecode\\); print\\('windows:', pipeline.build_windows\\(c, 40\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe cli.py validate-workbook \"CH 05 _EP 11.sbv\" out_v4_1_lean/CH_05__EP_11_master_review.xlsx)",
+      "Bash(export APP_PASSWORD=testpass123)",
+      "Bash(.venv/Scripts/python.exe -m uvicorn app:app --host 127.0.0.1 --port 8011 --log-level warning)",
+      "Bash(grep -i \"\\\\.env$\")"
+    ]
+  }
+}
