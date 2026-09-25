@@ -1,5 +1,9 @@
 # Render Blueprint. In the Render dashboard: New + -> Blueprint -> pick this repo.
 # Secret values (sync: false) are entered in the dashboard, not stored in git.
+#
+# Free plan note: the disk is wiped on every restart, deploy and idle spin-down
+# (about 15 minutes without traffic), so jobs can disappear before their 24 hours.
+# Download files when a job finishes.
 services:
   - type: web
     name: subtitle-review
@@ -15,8 +19,14 @@ services:
       - key: AZURE_OPENAI_API_KEY
         sync: false
       - key: AZURE_OPENAI_API_VERSION
-        value: 2024-10-21
+        value: 2024-12-01-preview
       - key: AZURE_OPENAI_DEPLOYMENT
         sync: false
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        value: centralindia
       - key: APP_PASSWORD
         sync: false
+      - key: RETENTION_HOURS
+        value: "24"

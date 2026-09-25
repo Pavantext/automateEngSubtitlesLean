@@ -4,6 +4,7 @@
 cli.py — command-line entry point for the lean subtitle review pipeline.
 
 Examples:
+    python cli.py transcribe episode.mp3 --formats sbv,srt --out-dir out_v4_1_lean
     python cli.py translate "CH 05 _EP 11.sbv" --out-dir out_v4_1_lean
     python cli.py validate-workbook "CH 05 _EP 11.sbv" out_v4_1_lean/CH_05__EP_11_master_review.xlsx
 """
@@ -12,11 +13,41 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tempfile
 from pathlib import Path
 
 import pandas as pd
 
 import pipeline
+
+
+def cmd_transcribe(args: argparse.Namespace) -> None:
+    import transcribe
+
+    formats = [f.strip().lower() for f in args.formats.split(",") if f.strip()]
+    bad = [f for f in formats if f not in ("sbv", "srt")]
+    if bad or not formats:
+        sys.exit(f"--formats must be sbv, srt or both (got {args.formats!r})")
+
+    source = Path(args.source)
+    with tempfile.TemporaryDirectory() as tmp:
+        compact = Path(tmp) / "audio.mp3"
+        transcribe.make_compact_audio(source, compact)
+        cues = transcribe.transcribe_audio(compact, context_hint=args.hint, progress=lambda msg: print(msg))
+    entries = [
+        (pipeline.seconds_to_srt_ts(c["start"]), pipeline.seconds_to_srt_ts(c["end"]), c["text"])
+        for c in cues
+    ]
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    print("\nDONE — review the Telugu before translating:")
+    for fmt in formats:
+        path = out_dir / f"{pipeline.safe_stem(source.name)}_telugu.{fmt}"
+        path.write_text(pipeline.format_subtitles(entries, fmt), encoding="utf-8")
+        print(f"Telugu {fmt.upper()}: {path}")
+    low = [i for i, c in enumerate(cues, 1) if c["confidence"] is not None and c["confidence"] < transcribe.LOW_CONFIDENCE]
+    if low:
+        print(f"Low-confidence cues to check first: {', '.join(map(str, low))}")
 
 
 def cmd_translate(args: argparse.Namespace) -> None:
@@ -66,9 +97,16 @@ def cmd_validate_workbook(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Lean one-pass Telugu subtitle review workbook automation (Azure OpenAI)"
+        description="Telugu audio/subtitle -> English review workbook automation"
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("transcribe", help="Create Telugu SBV/SRT from an audio file")
+    p.add_argument("source", help="Audio file (.mp3, .m4a, .wav, ...)")
+    p.add_argument("--formats", default="sbv,srt", help="sbv, srt or sbv,srt")
+    p.add_argument("--out-dir", default="out_v4_1_lean")
+    p.add_argument("--hint", default="", help="Names/terms that appear in the audio")
+    p.set_defaults(func=cmd_transcribe)
 
     p = sub.add_parser("translate", help="Create review workbook from Telugu SBV/SRT")
     p.add_argument("source")

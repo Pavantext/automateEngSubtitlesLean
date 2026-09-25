@@ -15,7 +15,9 @@
       --brand: #1F4E79;
       --brand-2: #2f6db5;
       --ok: #15803d;
+      --warn: #b45309;
       --err: #b91c1c;
+      --hl: rgba(47,109,181,0.08);
       --shadow: 0 6px 24px rgba(16, 33, 60, 0.08);
     }
     @media (prefers-color-scheme: dark) {
@@ -27,6 +29,10 @@
         --border: #263248;
         --brand: #3b82f6;
         --brand-2: #60a5fa;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --err: #f87171;
+        --hl: rgba(96,165,250,0.10);
         --shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
       }
     }
@@ -40,7 +46,9 @@
       -webkit-font-smoothing: antialiased;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
+    .te { font-family: "Nirmala UI", "Noto Sans Telugu", "Telugu Sangam MN", "Gautami", sans-serif; }
     .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 64px; }
+    .wrap.wide { max-width: 1200px; }
     header.top { text-align: center; margin: 8px 0 20px; }
     header.top h1 { font-size: 1.35rem; margin: 0 0 4px; }
     header.top p { color: var(--muted); margin: 0; font-size: 0.9rem; }
@@ -52,12 +60,14 @@
       padding: 20px;
       margin-bottom: 16px;
     }
+    .card h2 { font-size: 1.05rem; margin: 0 0 12px; }
     label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
     .hint { color: var(--muted); font-size: 0.8rem; margin: 4px 0 0; font-weight: 400; }
-    input[type="password"], input[type="text"], input[type="number"], select {
+    input[type="password"], input[type="text"], input[type="number"], select, textarea {
       width: 100%;
       padding: 12px 14px;
       font-size: 1rem;
+      font-family: inherit;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: var(--bg);
@@ -65,11 +75,17 @@
       -webkit-appearance: none;
       appearance: none;
     }
-    input:focus, select:focus { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+    textarea { resize: vertical; line-height: 1.45; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+    input.invalid { border-color: var(--err); outline-color: var(--err); }
     .field { margin-bottom: 16px; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row .field { flex: 1 1 140px; margin-bottom: 0; }
+    .checks { display: flex; gap: 18px; flex-wrap: wrap; }
+    .checks label { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; margin: 0; cursor: pointer; }
+    .checks input { width: 18px; height: 18px; accent-color: var(--brand-2); }
     button {
+      font-family: inherit;
       width: 100%;
       padding: 14px 16px;
       font-size: 1rem;
@@ -83,6 +99,10 @@
     }
     button:active { transform: translateY(1px); }
     button:disabled { opacity: 0.55; cursor: not-allowed; }
+    button.sm, button.ghost { width: auto; padding: 9px 14px; font-size: 0.88rem; border-radius: 10px; }
+    button.ghost { background: var(--bg); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+    button.ghost.danger { color: var(--err); }
+    button.icon { width: 34px; height: 34px; padding: 0; font-size: 0.9rem; border-radius: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
     .dropzone {
       border: 2px dashed var(--border);
       border-radius: 12px;
@@ -96,6 +116,7 @@
     .dropzone strong { color: var(--text); display: block; margin-bottom: 4px; }
     .filename { color: var(--brand-2); font-weight: 600; word-break: break-all; }
     .msg { font-size: 0.9rem; margin-top: 10px; min-height: 1.2em; }
+    #jobMsg:empty { display: none; }
     .msg.err { color: var(--err); }
     .msg.ok { color: var(--ok); }
     .log {
@@ -105,13 +126,13 @@
       padding: 12px 14px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.82rem;
-      max-height: 240px;
+      max-height: 200px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
     }
     .status-pill {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
       padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
       background: rgba(47,109,181,0.12); color: var(--brand-2);
     }
@@ -123,27 +144,92 @@
       animation: spin 0.7s linear infinite; display: inline-block;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .downloads { display: grid; gap: 10px; margin-top: 16px; }
-    a.dl {
-      display: flex; align-items: center; justify-content: space-between;
-      text-decoration: none; color: var(--text); font-weight: 600;
-      padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px;
-      background: var(--bg);
-    }
-    a.dl span.arrow { color: var(--brand-2); }
+    .bar { height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; margin-top: 10px; }
+    .bar > div { height: 100%; width: 0; background: var(--brand-2); transition: width 0.2s; }
     .hidden { display: none !important; }
     .linkbtn {
       background: none; border: none; color: var(--muted); font-weight: 600;
       width: auto; padding: 8px; font-size: 0.85rem;
     }
     footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 8px; }
+
+    /* Jobs list */
+    .jobs { display: grid; gap: 10px; }
+    .job-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+      cursor: pointer; text-align: left; color: var(--text);
+    }
+    .job-item:hover { border-color: var(--brand-2); }
+    .job-item .name { font-weight: 600; word-break: break-all; }
+    .job-item .meta { color: var(--muted); font-size: 0.8rem; }
+    .empty { color: var(--muted); font-size: 0.9rem; }
+
+    /* Job view */
+    .job-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .job-head h2 { margin: 0; word-break: break-all; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { width: auto; padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; background: var(--card); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+    .tab.active { background: var(--brand-2); color: #fff; border-color: var(--brand-2); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .toolbar .grow { flex: 1 1 auto; }
+    .summary { color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
+    .sticky { position: sticky; top: 0; z-index: 5; background: var(--card); padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    audio { width: 100%; height: 40px; }
+    details.opts { margin: 8px 0 14px; }
+    details.opts summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; font-weight: 600; }
+    details.opts .row { margin-top: 12px; }
+    select.filter { width: auto; padding: 8px 12px; font-size: 0.88rem; }
+
+    /* Cue editor */
+    .cues { display: grid; gap: 8px; }
+    .cue {
+      display: grid; grid-template-columns: 44px 150px 1fr 110px; gap: 10px; align-items: start;
+      padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+    }
+    .cue.playing { border-color: var(--brand-2); background: var(--hl); }
+    .cue.low { border-left: 4px solid var(--warn); }
+    .num { font-weight: 700; color: var(--muted); font-size: 0.85rem; padding-top: 8px; }
+    .times { display: grid; gap: 6px; }
+    .times input { padding: 6px 8px; font-size: 0.82rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .cue textarea { min-height: 64px; padding: 8px 10px; font-size: 1rem; }
+    .side { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .actions { display: flex; gap: 4px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; background: var(--border); color: var(--muted); }
+    .badge.warn { background: rgba(180,83,9,0.14); color: var(--warn); }
+    .badge.err { background: rgba(185,28,28,0.14); color: var(--err); }
+    .badge.ok { background: rgba(21,128,61,0.14); color: var(--ok); }
+
+    /* Review editor */
+    .rrow { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+    .rrow.flag-critical, .rrow.flag-major { border-left: 4px solid var(--err); }
+    .rrow.flag-minor { border-left: 4px solid var(--warn); }
+    .rhead { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
+    .rhead strong { color: var(--text); }
+    .rgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .rcell .lbl { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+    .rcell .txt { white-space: pre-wrap; font-size: 0.95rem; }
+    .rgrid textarea { min-height: 72px; padding: 8px 10px; font-size: 0.95rem; }
+    .finding { margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border); font-size: 0.88rem; }
+    .finding .sugg { margin: 6px 0; font-style: italic; }
+    .finding.stale { opacity: 0.6; }
+
+    @media (max-width: 760px) {
+      .cue { grid-template-columns: 1fr; }
+      .num { padding-top: 0; }
+      .times { grid-template-columns: 1fr 1fr; }
+      .side { flex-direction: row; justify-content: space-between; align-items: center; }
+      .rgrid { grid-template-columns: 1fr; }
+      .toolbar button.ghost { flex: 1 1 auto; }
+      #reviewPane .sticky { position: static; }  /* too tall to pin on a phone */
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div id="wrap" class="wrap">
     <header class="top">
       <h1>Telugu → English Subtitle Review</h1>
-      <p>Upload a <code>.sbv</code>/<code>.srt</code> · get an AI review workbook</p>
+      <p>Audio or <code>.sbv</code>/<code>.srt</code> → reviewed Telugu subtitles → AI English draft → human review → export</p>
     </header>
 
     <!-- LOGIN -->
@@ -157,266 +243,703 @@
       <p id="loginMsg" class="msg"></p>
     </section>
 
-    <!-- APP -->
-    <section id="appCard" class="card hidden">
-      <form id="uploadForm">
-        <div class="field">
-          <label>Subtitle file</label>
-          <div id="dropzone" class="dropzone">
-            <strong>Tap to choose or drop a file</strong>
-            <span>.sbv or .srt · UTF-8 · up to 2 MB</span>
-            <div id="fileName" class="filename" style="margin-top:8px;"></div>
-          </div>
-          <input id="fileInput" type="file" accept=".sbv,.srt,text/plain" class="hidden" />
-        </div>
-
-        <div class="row" style="margin-bottom:16px;">
+    <!-- HOME -->
+    <div id="homeView" class="hidden">
+      <section class="card">
+        <h2>New job</h2>
+        <form id="uploadForm">
           <div class="field">
-            <label for="chunkSize">Chunk size</label>
-            <input id="chunkSize" type="number" min="5" max="200" value="40" inputmode="numeric" />
+            <label>Audio or subtitle file</label>
+            <div id="dropzone" class="dropzone">
+              <strong>Tap to choose or drop a file</strong>
+              <span>Audio (.mp3, .m4a, .wav, … up to 300 MB) or Telugu .sbv/.srt (UTF-8, up to 2 MB)</span>
+              <div id="fileName" class="filename" style="margin-top:8px;"></div>
+            </div>
+            <input id="fileInput" type="file" class="hidden"
+              accept=".mp3,.mpeg,.mpga,.m4a,.mp4,.wav,.ogg,.oga,.opus,.webm,.flac,.aac,.sbv,.srt,audio/*" />
           </div>
+
           <div class="field">
-            <label for="overlap">Overlap</label>
-            <input id="overlap" type="number" min="0" max="20" value="3" inputmode="numeric" />
+            <label>Telugu subtitle formats to create</label>
+            <div class="checks">
+              <label><input type="checkbox" name="fmt" value="sbv" checked /> SBV (YouTube)</label>
+              <label><input type="checkbox" name="fmt" value="srt" checked /> SRT</label>
+            </div>
+          </div>
+
+          <div id="hintField" class="field hidden">
+            <label for="contextHint">Names &amp; terms <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input id="contextHint" type="text" class="te" placeholder="e.g. శ్రీమన్నారాయణ, భగవద్గీత, అర్జునుడు" />
+            <p class="hint">Comma-separated names and Sanskrit terms that occur in this recording. Azure Speech is biased toward these spellings.</p>
+          </div>
+
+          <button id="runBtn" type="submit">Upload &amp; start</button>
+          <div id="uploadBar" class="bar hidden"><div></div></div>
+          <p id="uploadMsg" class="msg"></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Recent jobs</h2>
+        <p class="hint" id="retentionNote" style="margin:-6px 0 12px;">Files are kept for 24 hours, then deleted automatically.</p>
+        <div id="jobsList" class="jobs"><p class="empty">Loading…</p></div>
+      </section>
+    </div>
+
+    <!-- JOB -->
+    <div id="jobView" class="hidden">
+      <section class="card">
+        <div class="job-head">
+          <div>
+            <button id="backBtn" class="linkbtn" type="button" style="padding:0 0 6px;">← All jobs</button>
+            <h2 id="jobTitle"></h2>
+            <p class="hint" id="jobMeta"></p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="statusPill" class="status-pill"></span>
+            <button id="deleteBtn" class="ghost danger" type="button">Delete</button>
           </div>
         </div>
-
-        <div class="field">
-          <label for="model">Azure deployment <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-          <input id="model" type="text" placeholder="Leave blank to use server default" />
-          <p class="hint">Overrides <code>AZURE_OPENAI_DEPLOYMENT</code> for this run only.</p>
+        <div id="logBox" class="hidden" style="margin-top:14px;">
+          <div id="log" class="log"></div>
         </div>
+        <p id="jobMsg" class="msg"></p>
+      </section>
 
-        <button id="runBtn" type="submit">Translate</button>
-        <p id="uploadMsg" class="msg"></p>
-      </form>
-    </section>
-
-    <!-- JOB STATUS -->
-    <section id="jobCard" class="card hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <strong id="jobTitle">Translation job</strong>
-        <span id="statusPill" class="status-pill"><span class="spinner"></span> queued</span>
+      <div id="tabs" class="tabs hidden">
+        <button class="tab" data-tab="source" type="button">1 · Telugu subtitles</button>
+        <button class="tab" data-tab="review" type="button">2 · English review</button>
       </div>
-      <div id="log" class="log">Starting…</div>
-      <div id="downloads" class="downloads hidden"></div>
-      <button id="newJobBtn" class="linkbtn hidden" type="button">← Start another file</button>
-    </section>
+
+      <!-- SOURCE EDITOR -->
+      <section id="sourcePane" class="card hidden">
+        <div class="sticky">
+          <audio id="player" class="hidden" controls preload="metadata"></audio>
+          <div class="toolbar" style="margin:10px 0 0;">
+            <select id="sourceFilter" class="filter" aria-label="Filter cues">
+              <option value="all">All cues, in order</option>
+              <option value="worst">Least confident first</option>
+              <option value="low">Low confidence only</option>
+            </select>
+            <span class="grow"></span>
+            <button id="saveSourceBtn" class="ghost" type="button">Save changes</button>
+          </div>
+        </div>
+        <div id="teDownloads" class="toolbar"></div>
+        <div id="sourceSummary" class="summary"></div>
+        <p id="sourceMsg" class="msg"></p>
+        <div id="cueList" class="cues"></div>
+
+        <div style="margin-top:18px;">
+          <details class="opts">
+            <summary>Translation options</summary>
+            <div class="row">
+              <div class="field">
+                <label for="chunkSize">Chunk size</label>
+                <input id="chunkSize" type="number" min="5" max="200" value="40" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label for="overlap">Overlap</label>
+                <input id="overlap" type="number" min="0" max="20" value="3" inputmode="numeric" />
+              </div>
+              <div class="field" style="flex-basis:220px;">
+                <label for="model">Azure deployment</label>
+                <input id="model" type="text" placeholder="Server default" />
+              </div>
+            </div>
+          </details>
+          <button id="translateBtn" type="button">Save &amp; translate to English →</button>
+          <p class="hint" id="translateHint"></p>
+        </div>
+      </section>
+
+      <!-- REVIEW EDITOR -->
+      <section id="reviewPane" class="card hidden">
+        <div class="sticky">
+          <div class="toolbar" style="margin:0;">
+            <select id="reviewFilter" class="filter" aria-label="Filter cues">
+              <option value="all">All cues</option>
+              <option value="flagged">Flagged by AI review</option>
+              <option value="warn">Reading-speed / length warnings</option>
+              <option value="corrected">Corrected by reviewer</option>
+            </select>
+            <span class="grow"></span>
+            <button id="saveReviewBtn" class="ghost" type="button">Save corrections</button>
+            <button id="aiReviewBtn" class="ghost" type="button">Run AI review</button>
+          </div>
+          <div id="enDownloads" class="toolbar" style="margin:10px 0 0;"></div>
+        </div>
+        <div id="reviewSummary" class="summary"></div>
+        <p id="reviewMsg" class="msg"></p>
+        <div id="reviewList" class="cues"></div>
+      </section>
+    </div>
 
     <div style="text-align:center;">
       <button id="logoutBtn" class="linkbtn hidden" type="button">Lock app</button>
     </div>
-    <footer>Runs on Azure OpenAI · Human review still required before publishing.</footer>
+    <footer>Speech: Azure AI Speech · Translation: Azure OpenAI · A human reviews every cue before publishing.</footer>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     const KEY = "subtitle_app_pw";
-    let password = sessionStorage.getItem(KEY) || "";
-    let pollTimer = null;
+    const LOW_CONF = 0.77, MAX_CPS = 20, MAX_LINE = 42;
+    const BUSY = new Set(["transcribing", "translating", "reviewing"]);
+    const STATE_LABEL = {
+      transcribing: "Transcribing audio",
+      source: "Telugu ready to review",
+      translating: "Translating",
+      review: "English ready to review",
+      reviewing: "AI reviewing",
+      failed: "Failed",
+    };
 
-    function authHeaders(extra = {}) {
-      return { "X-App-Password": password, ...extra };
+    let password = sessionStorage.getItem(KEY) || "";
+    let retentionHours = 24;
+    let job = null;        // public job data
+    let source = [];       // [{start, end, text, confidence}]
+    let rows = [];         // [{cue, start, end, telugu, english, correction, review}]
+    let sourceDirty = false, reviewDirty = false;
+    let activeTab = "source";
+    let pollTimer = null;
+    let stopAt = null, playingRow = null;
+
+    // ---------- helpers ----------
+    function el(tag, props = {}, ...kids) {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(props)) {
+        if (v === undefined || v === null || v === false) continue;
+        if (k === "class") n.className = v;
+        else if (k === "value") n.value = v;
+        else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+        else n.setAttribute(k, v === true ? "" : v);
+      }
+      for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) n.append(kid);
+      return n;
+    }
+    function setMsg(id, text, kind = "") { const m = $(id); m.className = "msg " + kind; m.textContent = text || ""; }
+    function show(id, on = true) { $(id).classList.toggle("hidden", !on); }
+
+    function tsToSec(ts) {
+      const m = String(ts).trim().replace(",", ".").match(/^(?:(\d+):)?(\d{1,2}):(\d{1,2}(?:\.\d{1,3})?)$/);
+      if (!m) return null;
+      const h = +(m[1] || 0), mi = +m[2], s = +m[3];
+      if (mi >= 60 || s >= 60) return null;
+      return h * 3600 + mi * 60 + s;
+    }
+    function secToTs(sec) {
+      let ms = Math.round(Math.max(0, sec) * 1000);
+      const h = Math.floor(ms / 3600000); ms -= h * 3600000;
+      const m = Math.floor(ms / 60000); ms -= m * 60000;
+      const s = Math.floor(ms / 1000); ms -= s * 1000;
+      const p = (x, n = 2) => String(x).padStart(n, "0");
+      return `${p(h)}:${p(m)}:${p(s)},${p(ms, 3)}`;
+    }
+    function timeLeft(iso) {
+      const ms = new Date(iso) - new Date();
+      if (ms <= 0) return "expired";
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+      return h ? `deleted in ${h} h ${m} min` : `deleted in ${m} min`;
+    }
+    const plain = (t) => String(t || "").replace(/\*/g, "");
+    const currentEnglish = (r) => (r.correction || "").trim() || r.english;
+    function readability(r) {
+      const text = plain(currentEnglish(r));
+      const dur = Math.max(0.1, tsToSec(r.end) - tsToSec(r.start));
+      const cps = text.length / dur;
+      const lines = text.includes("\n") ? text.split("\n") : (text.length <= MAX_LINE ? [text] : [text.slice(0, Math.ceil(text.length / 2)), text.slice(Math.ceil(text.length / 2))]);
+      const longest = Math.max(...lines.map((l) => l.length));
+      const warn = cps > MAX_CPS || longest > MAX_LINE || lines.length > 2;
+      return { cps, dur, longest, warn };
     }
 
+    // ---------- API ----------
     async function api(path, opts = {}) {
-      const res = await fetch(path, { ...opts, headers: authHeaders(opts.headers || {}) });
+      const res = await fetch(path, { ...opts, headers: { "X-App-Password": password, ...(opts.headers || {}) } });
+      if (res.status === 401) { logout(); throw new Error("Locked"); }
       return res;
     }
-
-    // ---- Login ----
-    async function tryLogin(pw) {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "X-App-Password": pw },
-      });
-      return res.ok;
+    async function apiJson(path, opts = {}) {
+      const res = await api(path, opts);
+      let data = null;
+      try { data = await res.json(); } catch (_) { /* non-JSON */ }
+      if (!res.ok) throw new Error((data && data.detail) || `Request failed (${res.status})`);
+      return data;
+    }
+    async function download(path) {
+      const res = await api(path);
+      if (!res.ok) { alert("Download failed."); return; }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") || "";
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const url = URL.createObjectURL(blob);
+      const a = el("a", { href: url, download: m ? m[1] : "download" });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    // ---------- login ----------
+    async function tryLogin(pw) {
+      const res = await fetch("/api/login", { method: "POST", headers: { "X-App-Password": pw } });
+      if (!res.ok) return false;
+      const data = await res.json();
+      retentionHours = data.retention_hours || 24;
+      return true;
+    }
     async function doLogin() {
       const pw = $("password").value.trim();
-      const msg = $("loginMsg");
-      msg.className = "msg";
-      msg.textContent = "";
-      if (!pw) { msg.className = "msg err"; msg.textContent = "Enter the password."; return; }
+      setMsg("loginMsg", "");
+      if (!pw) return setMsg("loginMsg", "Enter the password.", "err");
       $("loginBtn").disabled = true;
       try {
-        const ok = await tryLogin(pw);
-        if (!ok) { msg.className = "msg err"; msg.textContent = "Incorrect password."; return; }
+        if (!(await tryLogin(pw))) return setMsg("loginMsg", "Incorrect password.", "err");
         password = pw;
         sessionStorage.setItem(KEY, pw);
-        showApp();
+        unlocked();
       } catch (e) {
-        msg.className = "msg err";
-        msg.textContent = "Could not reach the server.";
+        setMsg("loginMsg", "Could not reach the server.", "err");
       } finally {
         $("loginBtn").disabled = false;
       }
     }
-
-    function showApp() {
-      $("loginCard").classList.add("hidden");
-      $("appCard").classList.remove("hidden");
-      $("logoutBtn").classList.remove("hidden");
+    function unlocked() {
+      show("loginCard", false);
+      show("logoutBtn");
+      $("retentionNote").textContent = `Files are kept for ${retentionHours} hours after upload, then deleted automatically.`;
+      route();
     }
-
     function logout() {
       sessionStorage.removeItem(KEY);
       password = "";
-      if (pollTimer) clearInterval(pollTimer);
+      location.hash = "";
       location.reload();
     }
 
-    // ---- File selection ----
+    // ---------- routing ----------
+    function route() {
+      const m = location.hash.match(/job=([0-9a-f]+)/);
+      if (m) openJob(m[1]); else showHome();
+    }
+    window.addEventListener("hashchange", () => { if (password) route(); });
+    function confirmLeave() {
+      return !(sourceDirty || reviewDirty) || confirm("You have unsaved changes. Leave without saving?");
+    }
+    window.addEventListener("beforeunload", (e) => { if (sourceDirty || reviewDirty) { e.preventDefault(); e.returnValue = ""; } });
+
+    // ---------- home ----------
+    async function showHome() {
+      clearInterval(pollTimer);
+      $("player").pause();
+      job = null; sourceDirty = reviewDirty = false;
+      $("wrap").classList.remove("wide");
+      show("jobView", false); show("homeView");
+      const list = $("jobsList");
+      try {
+        const jobs = await apiJson("/api/jobs");
+        list.innerHTML = "";
+        if (!jobs.length) list.append(el("p", { class: "empty" }, "No jobs in the last " + retentionHours + " hours."));
+        for (const j of jobs) {
+          list.append(el("button", { class: "job-item", type: "button", onclick: () => { location.hash = "job=" + j.id; } },
+            el("div", {},
+              el("div", { class: "name" }, j.filename),
+              el("div", { class: "meta" }, `${j.kind === "audio" ? "Audio" : "Subtitle"} · ${j.cue_count || "–"} cues · ${timeLeft(j.expires_at)}`)),
+            pill(j.state, j.error)));
+        }
+      } catch (e) {
+        list.innerHTML = "";
+        list.append(el("p", { class: "msg err" }, e.message));
+      }
+    }
+    function pill(state, error) {
+      const p = el("span", { class: "status-pill" });
+      if (BUSY.has(state)) p.append(el("span", { class: "spinner" }), " " + STATE_LABEL[state]);
+      else if (state === "failed" || error) { p.classList.add("error"); p.textContent = state === "failed" ? "✕ Failed" : "⚠ " + STATE_LABEL[state]; }
+      else { p.classList.add("done"); p.textContent = "✓ " + (STATE_LABEL[state] || state); }
+      return p;
+    }
+
+    // upload
+    const AUDIO_RE = /\.(mp3|mpeg|mpga|m4a|mp4|wav|ogg|oga|opus|webm|flac|aac)$/i;
     const dz = $("dropzone");
     dz.addEventListener("click", () => $("fileInput").click());
     $("fileInput").addEventListener("change", () => showFile($("fileInput").files[0]));
-    ["dragover", "dragenter"].forEach((ev) =>
-      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); })
-    );
-    ["dragleave", "drop"].forEach((ev) =>
-      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); })
-    );
+    ["dragover", "dragenter"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
+    ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
     dz.addEventListener("drop", (e) => {
       const f = e.dataTransfer.files[0];
       if (f) { $("fileInput").files = e.dataTransfer.files; showFile(f); }
     });
     function showFile(f) {
-      $("fileName").textContent = f ? f.name : "";
+      $("fileName").textContent = f ? `${f.name} · ${(f.size / 1048576).toFixed(1)} MB` : "";
+      show("hintField", !!(f && AUDIO_RE.test(f.name)));
     }
 
-    // ---- Submit job ----
-    $("uploadForm").addEventListener("submit", async (e) => {
+    $("uploadForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const file = $("fileInput").files[0];
-      const msg = $("uploadMsg");
-      msg.className = "msg";
-      msg.textContent = "";
-      if (!file) { msg.className = "msg err"; msg.textContent = "Choose a subtitle file first."; return; }
+      setMsg("uploadMsg", "");
+      if (!file) return setMsg("uploadMsg", "Choose an audio or subtitle file first.", "err");
+      const formats = [...document.querySelectorAll('input[name="fmt"]:checked')].map((c) => c.value);
+      if (!formats.length) return setMsg("uploadMsg", "Choose at least one format (SBV or SRT).", "err");
 
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("chunk_size", $("chunkSize").value || "40");
-      fd.append("overlap", $("overlap").value || "3");
-      fd.append("model", $("model").value.trim());
+      fd.append("formats", formats.join(","));
+      fd.append("context_hint", $("contextHint").value.trim());
 
+      // XHR (not fetch) so large audio uploads can show progress.
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/jobs");
+      xhr.setRequestHeader("X-App-Password", password);
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) $("uploadBar").firstElementChild.style.width = (100 * ev.loaded / ev.total).toFixed(1) + "%";
+      };
+      xhr.onload = () => {
+        $("runBtn").disabled = false; show("uploadBar", false);
+        if (xhr.status === 401) return logout();
+        let data = {};
+        try { data = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
+        if (xhr.status >= 400) return setMsg("uploadMsg", data.detail || "Upload failed.", "err");
+        $("uploadForm").reset(); showFile(null);
+        location.hash = "job=" + data.id;
+      };
+      xhr.onerror = () => { $("runBtn").disabled = false; show("uploadBar", false); setMsg("uploadMsg", "Network error. Try again.", "err"); };
       $("runBtn").disabled = true;
-      try {
-        const res = await api("/api/jobs", { method: "POST", body: fd });
-        if (res.status === 401) { logout(); return; }
-        const data = await res.json();
-        if (!res.ok) {
-          msg.className = "msg err";
-          msg.textContent = data.detail || "Upload failed.";
-          return;
-        }
-        startWatching(data);
-      } catch (err) {
-        msg.className = "msg err";
-        msg.textContent = "Network error. Try again.";
-      } finally {
-        $("runBtn").disabled = false;
-      }
+      $("uploadBar").firstElementChild.style.width = "0";
+      show("uploadBar");
+      setMsg("uploadMsg", "Uploading…");
+      xhr.send(fd);
     });
 
-    // ---- Poll job ----
-    const ARTIFACT_LABELS = {
-      workbook: "Review workbook (.xlsx)",
-      brief: "Discourse brief (.md)",
-      raw: "Raw translation (.json)",
-    };
-
-    function startWatching(job) {
-      $("appCard").classList.add("hidden");
-      $("jobCard").classList.remove("hidden");
-      $("downloads").classList.add("hidden");
-      $("downloads").innerHTML = "";
-      $("newJobBtn").classList.add("hidden");
-      $("jobTitle").textContent = job.filename + (job.cue_count ? ` · ${job.cue_count} cues` : "");
-      renderStatus(job);
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(() => pollJob(job.id), 1600);
-      pollJob(job.id);
-    }
-
-    async function pollJob(id) {
+    // ---------- job view ----------
+    async function openJob(id) {
+      clearInterval(pollTimer);
+      source = []; rows = []; sourceDirty = reviewDirty = false;
+      show("homeView", false); show("jobView");
+      $("wrap").classList.add("wide");
+      setMsg("jobMsg", "");
       try {
-        const res = await api(`/api/jobs/${id}`);
-        if (res.status === 401) { logout(); return; }
-        if (!res.ok) return;
-        const job = await res.json();
-        renderStatus(job);
-        if (job.status === "done" || job.status === "error") {
-          clearInterval(pollTimer);
-          $("newJobBtn").classList.remove("hidden");
-          if (job.status === "done") renderDownloads(id, job.artifacts);
-        }
-      } catch (_) { /* keep polling */ }
+        job = await apiJson(`/api/jobs/${id}`);
+      } catch (e) {
+        setMsg("jobMsg", e.message + " It may have expired.", "err");
+        show("tabs", false); show("sourcePane", false); show("reviewPane", false);
+        $("jobTitle").textContent = "Job not found";
+        return;
+      }
+      if (job.audio_token) {
+        $("player").src = `/api/jobs/${job.id}/audio?token=${job.audio_token}`;
+        show("player");
+      } else {
+        $("player").removeAttribute("src"); show("player", false);
+      }
+      await loadData();
+      activeTab = job.downloads.includes("workbook") ? "review" : "source";
+      renderJob();
+      if (job.busy) startPolling();
     }
 
-    function renderStatus(job) {
-      const pill = $("statusPill");
-      const log = $("log");
-      if (job.progress && job.progress.length) {
+    async function loadData() {
+      if (job.downloads.some((d) => d.startsWith("telugu")) && !sourceDirty) source = await apiJson(`/api/jobs/${job.id}/source`);
+      if (job.downloads.includes("workbook") && !reviewDirty) rows = await apiJson(`/api/jobs/${job.id}/review`);
+    }
+
+    function startPolling() {
+      clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        try {
+          const prev = job.state;
+          job = await apiJson(`/api/jobs/${job.id}`);
+          if (!job.busy) {
+            clearInterval(pollTimer);
+            await loadData();
+            if (prev === "translating" && job.state === "review") activeTab = "review";
+            renderJob();
+          } else renderHeader();
+        } catch (_) { /* keep polling */ }
+      }, 2000);
+    }
+
+    function renderHeader() {
+      $("jobTitle").textContent = job.filename;
+      $("jobMeta").textContent = `${job.kind === "audio" ? "Audio" : "Subtitle"} upload · ${job.cue_count || "–"} cues · ${timeLeft(job.expires_at)}`;
+      const p = pill(job.state, job.error);
+      $("statusPill").replaceWith(p); p.id = "statusPill";
+      const showLog = job.busy || !!job.error || job.state === "failed";
+      show("logBox", showLog);
+      if (showLog) {
+        const log = $("log");
         log.textContent = job.progress.join("\n");
         log.scrollTop = log.scrollHeight;
       }
-      pill.classList.remove("done", "error");
-      if (job.status === "done") {
-        pill.classList.add("done");
-        pill.innerHTML = "✓ done";
-      } else if (job.status === "error") {
-        pill.classList.add("error");
-        pill.innerHTML = "✕ error";
-      } else {
-        pill.innerHTML = `<span class="spinner"></span> ${job.status}`;
+      setMsg("jobMsg", job.error ? job.error : "", job.error ? "err" : "");
+      $("deleteBtn").disabled = job.busy;
+      ["translateBtn", "saveSourceBtn", "saveReviewBtn", "aiReviewBtn"].forEach((b) => { $(b).disabled = job.busy; });
+    }
+
+    function renderJob() {
+      renderHeader();
+      const hasSource = source.length > 0, hasReview = rows.length > 0;
+      show("tabs", hasSource);
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.tab === activeTab);
+        t.disabled = t.dataset.tab === "review" && !hasReview;
+      });
+      if (activeTab === "review" && !hasReview) activeTab = "source";
+      show("sourcePane", hasSource && activeTab === "source");
+      show("reviewPane", hasReview && activeTab === "review");
+      if (hasSource) renderSource();
+      if (hasReview) renderReview();
+    }
+    document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { activeTab = t.dataset.tab; renderJob(); }));
+
+    // ---------- source editor ----------
+    function markSourceDirty() { sourceDirty = true; setMsg("sourceMsg", "Unsaved changes.", ""); }
+
+    function renderSource() {
+      const list = $("cueList");
+      const filter = $("sourceFilter").value;
+      list.innerHTML = "";
+      const order = source.map((_, i) => i);
+      const conf = (i) => (source[i].confidence === null || source[i].confidence === undefined ? 2 : source[i].confidence);
+      if (filter === "worst") order.sort((a, b) => conf(a) - conf(b));
+      order.forEach((i) => {
+        const c = source[i];
+        const low = c.confidence !== null && c.confidence !== undefined && c.confidence < LOW_CONF;
+        if (filter === "low" && !low) return;
+        const startIn = el("input", { type: "text", value: c.start, "aria-label": "Start time", inputmode: "decimal" });
+        const endIn = el("input", { type: "text", value: c.end, "aria-label": "End time", inputmode: "decimal" });
+        const timeChange = (inp, key) => () => {
+          const ok = tsToSec(inp.value) !== null;
+          inp.classList.toggle("invalid", !ok);
+          if (ok) { c[key] = secToTs(tsToSec(inp.value)); markSourceDirty(); }
+        };
+        startIn.addEventListener("change", timeChange(startIn, "start"));
+        endIn.addEventListener("change", timeChange(endIn, "end"));
+        const ta = el("textarea", { class: "te", rows: 2, value: c.text, "aria-label": `Cue ${i + 1} text` });
+        ta.addEventListener("input", () => { c.text = ta.value; markSourceDirty(); });
+        const dur = (tsToSec(c.end) - tsToSec(c.start)).toFixed(1);
+        const conf = c.confidence === null || c.confidence === undefined ? null
+          : el("span", { class: "badge " + (low ? "warn" : "ok"), title: "Speech recognition confidence" }, `${Math.round(c.confidence * 100)}%`);
+        const row = el("div", { class: "cue" + (low ? " low" : ""), "data-i": i },
+          el("div", { class: "num" }, "#" + (i + 1)),
+          el("div", { class: "times" }, startIn, endIn),
+          ta,
+          el("div", { class: "side" },
+            el("div", { class: "actions" },
+              job.has_audio ? el("button", { class: "icon", type: "button", title: "Play this cue", onclick: () => playCue(c, row) }, "▶") : null,
+              el("button", { class: "icon", type: "button", title: "Insert a cue after this one", onclick: () => insertCue(i) }, "+"),
+              el("button", { class: "icon", type: "button", title: "Delete this cue", onclick: () => deleteCue(i) }, "✕")),
+            el("span", { class: "badge" }, dur + " s"),
+            conf));
+        list.append(row);
+      });
+      const lowCount = source.filter((c) => c.confidence !== null && c.confidence !== undefined && c.confidence < LOW_CONF).length;
+      $("sourceSummary").textContent = `${source.length} cues` + (job.has_audio ? ` · ${lowCount} low-confidence (orange) — play and check these first` : "");
+
+      const dl = $("teDownloads");
+      dl.innerHTML = "";
+      for (const d of job.downloads.filter((x) => x.startsWith("telugu."))) {
+        const fmt = d.split(".")[1];
+        dl.append(el("button", { class: "ghost", type: "button", onclick: () => saveThen(() => download(`/api/jobs/${job.id}/download/telugu?fmt=${fmt}`)) }, `Download .${fmt}`));
+      }
+      const hasReview = rows.length > 0;
+      $("translateBtn").textContent = hasReview ? "Save & re-translate to English →" : "Save & translate to English →";
+      $("translateHint").textContent = hasReview
+        ? "Re-translating replaces the English draft and clears saved corrections."
+        : "Translation uses the Telugu cues exactly as they are here, so fix recognition errors first.";
+    }
+    $("sourceFilter").addEventListener("change", renderSource);
+
+    function insertCue(i) {
+      const cur = source[i], next = source[i + 1];
+      const start = tsToSec(cur.end);
+      const end = next ? Math.max(start + 0.5, Math.min(tsToSec(next.start), start + 2)) : start + 2;
+      source.splice(i + 1, 0, { start: secToTs(start), end: secToTs(end), text: "", confidence: null });
+      markSourceDirty(); renderSource();
+      const ta = document.querySelector(`.cue[data-i="${i + 1}"] textarea`);
+      if (ta) ta.focus();
+    }
+    function deleteCue(i) {
+      if (source.length === 1) return;
+      source.splice(i, 1); markSourceDirty(); renderSource();
+    }
+
+    function playCue(c, row) {
+      const p = $("player");
+      if (playingRow) playingRow.classList.remove("playing");
+      playingRow = row; row.classList.add("playing");
+      p.currentTime = tsToSec(c.start);
+      stopAt = tsToSec(c.end);
+      p.play().catch(() => { /* blocked until the user interacts; the seek still happened */ });
+    }
+    $("player").addEventListener("timeupdate", () => {
+      const p = $("player");
+      if (stopAt !== null && p.currentTime >= stopAt) { p.pause(); stopAt = null; }
+    });
+    $("player").addEventListener("pause", () => { if (playingRow) playingRow.classList.remove("playing"); playingRow = null; });
+
+    async function saveSource() {
+      const bad = source.findIndex((c) => !c.text.trim());
+      if (bad >= 0) { setMsg("sourceMsg", `Cue #${bad + 1} is empty — type its text or delete it.`, "err"); return false; }
+      try {
+        const res = await apiJson(`/api/jobs/${job.id}/source`, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(source),
+        });
+        sourceDirty = false;
+        source = await apiJson(`/api/jobs/${job.id}/source`);
+        job.cue_count = res.cue_count;
+        renderSource(); renderHeader();
+        setMsg("sourceMsg", res.translation_stale ? "Saved. The English draft was made from the earlier Telugu — re-translate to update it." : "Saved.", "ok");
+        return true;
+      } catch (e) {
+        setMsg("sourceMsg", e.message, "err");
+        return false;
       }
     }
+    $("saveSourceBtn").addEventListener("click", saveSource);
 
-    function renderDownloads(id, artifacts) {
-      const box = $("downloads");
-      box.innerHTML = "";
-      const order = ["workbook", "brief", "raw"];
-      order.filter((k) => artifacts.includes(k)).forEach((k) => {
-        const a = document.createElement("a");
-        a.className = "dl";
-        a.href = `/api/jobs/${id}/files/${k}`;
-        // Force the auth header via fetch-download since <a> can't send headers.
-        a.addEventListener("click", async (e) => {
-          e.preventDefault();
-          const res = await api(a.href);
-          if (!res.ok) return;
-          const blob = await res.blob();
-          const cd = res.headers.get("Content-Disposition") || "";
-          const m = cd.match(/filename="?([^"]+)"?/);
-          const url = URL.createObjectURL(blob);
-          const tmp = document.createElement("a");
-          tmp.href = url;
-          tmp.download = m ? m[1] : k;
-          tmp.click();
-          URL.revokeObjectURL(url);
-        });
-        a.innerHTML = `<span>${ARTIFACT_LABELS[k] || k}</span><span class="arrow">Download ↓</span>`;
-        box.appendChild(a);
-      });
-      box.classList.remove("hidden");
+    async function saveThen(fn) {
+      if (sourceDirty && !(await saveSource())) return;
+      if (reviewDirty && !(await saveReview())) return;
+      await fn();
     }
 
-    $("newJobBtn").addEventListener("click", () => {
-      $("jobCard").classList.add("hidden");
-      $("appCard").classList.remove("hidden");
-      $("uploadForm").reset();
-      $("fileName").textContent = "";
+    $("translateBtn").addEventListener("click", async () => {
+      if (rows.length && !confirm("Re-translate? This replaces the English draft and clears saved corrections.")) return;
+      if (sourceDirty && !(await saveSource())) return;
+      const fd = new FormData();
+      fd.append("chunk_size", $("chunkSize").value || "40");
+      fd.append("overlap", $("overlap").value || "3");
+      fd.append("model", $("model").value.trim());
+      try {
+        job = await apiJson(`/api/jobs/${job.id}/translate`, { method: "POST", body: fd });
+        renderHeader(); startPolling();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e) { setMsg("sourceMsg", e.message, "err"); }
     });
 
-    // ---- Wire up ----
+    // ---------- review editor ----------
+    function markReviewDirty() { reviewDirty = true; setMsg("reviewMsg", "Unsaved changes.", ""); }
+
+    function renderReview() {
+      const list = $("reviewList");
+      const filter = $("reviewFilter").value;
+      list.innerHTML = "";
+      let corrected = 0, warns = 0;
+      const sev = { critical: 0, major: 0, minor: 0 };
+      rows.forEach((r) => {
+        const f = r.review;
+        const flagged = f && f.verdict === "issue";
+        if (flagged) sev[f.severity] = (sev[f.severity] || 0) + 1;
+        if ((r.correction || "").trim()) corrected++;
+        const rd = readability(r);
+        if (rd.warn) warns++;
+        if (filter === "flagged" && !flagged) return;
+        if (filter === "corrected" && !(r.correction || "").trim()) return;
+        if (filter === "warn" && !rd.warn) return;
+        list.append(reviewRow(r, rd));
+      });
+      const aiPart = rows.some((r) => r.review)
+        ? ` · AI review: ${sev.critical} critical, ${sev.major} major, ${sev.minor} minor`
+        : " · AI review not run yet (optional)";
+      $("reviewSummary").textContent = `${rows.length} cues · ${corrected} corrected · ${warns} reading-speed/length warnings${aiPart}`;
+
+      const dl = $("enDownloads");
+      dl.innerHTML = "";
+      const items = [
+        ["English .srt", "english?fmt=srt"], ["English .sbv", "english?fmt=sbv"],
+        ["Workbook .xlsx", "workbook"], ["Brief .md", "brief"], ["Raw .json", "raw"],
+      ];
+      for (const [label, path] of items) {
+        dl.append(el("button", { class: "ghost", type: "button", onclick: () => saveThen(() => download(`/api/jobs/${job.id}/download/${path}`)) }, label));
+      }
+    }
+    $("reviewFilter").addEventListener("change", renderReview);
+
+    function reviewRow(r, rd) {
+      const f = r.review;
+      const flagged = f && f.verdict === "issue";
+      const ta = el("textarea", { rows: 3, value: r.correction || "", placeholder: "Leave blank to accept the AI English", "aria-label": `Correction for cue ${r.cue}` });
+      const cpsBadge = el("span", { class: "badge " + (rd.warn ? "warn" : "") }, `${rd.cps.toFixed(0)} chars/s`);
+      ta.addEventListener("input", () => {
+        r.correction = ta.value; markReviewDirty();
+        const now = readability(r);
+        cpsBadge.textContent = `${now.cps.toFixed(0)} chars/s`;
+        cpsBadge.className = "badge " + (now.warn ? "warn" : "");
+      });
+      const head = el("div", { class: "rhead" },
+        el("strong", {}, "#" + r.cue), `${r.start} → ${r.end} · ${rd.dur.toFixed(1)} s`, cpsBadge,
+        rd.longest > MAX_LINE ? el("span", { class: "badge warn" }, "long line") : null,
+        (r.correction || "").trim() ? el("span", { class: "badge ok" }, "corrected") : null,
+        flagged ? el("span", { class: "badge " + (f.severity === "minor" ? "warn" : "err") }, `${f.severity} · ${f.category}`) : null,
+        f && f.verdict === "ok" ? el("span", { class: "badge ok" }, "AI: ok") : null);
+      let finding = null;
+      if (flagged) {
+        const stale = f.reviewed !== currentEnglish(r);
+        finding = el("div", { class: "finding" + (stale ? " stale" : "") },
+          el("div", {}, el("strong", {}, "AI review: "), f.issue || "Possible issue."),
+          f.suggestion ? el("div", { class: "sugg" }, "Suggestion: " + f.suggestion) : null,
+          stale ? el("div", { class: "hint" }, "This was flagged on an earlier version of the English.") : null,
+          f.suggestion ? el("button", { class: "ghost sm", type: "button", onclick: () => {
+            r.correction = f.suggestion; ta.value = f.suggestion; ta.dispatchEvent(new Event("input"));
+          } }, "Use suggestion") : null);
+      }
+      return el("div", { class: "rrow" + (flagged ? " flag-" + f.severity : "") },
+        head,
+        el("div", { class: "rgrid" },
+          el("div", { class: "rcell" }, el("div", { class: "lbl" }, "Telugu"), el("div", { class: "txt te" }, r.telugu)),
+          el("div", { class: "rcell" }, el("div", { class: "lbl" }, "AI English"), el("div", { class: "txt" }, r.english)),
+          el("div", { class: "rcell" }, el("div", { class: "lbl" }, "Human correction"), ta)),
+        finding);
+    }
+
+    async function saveReview() {
+      try {
+        const res = await apiJson(`/api/jobs/${job.id}/review`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rows.map((r) => ({ cue: r.cue, correction: r.correction || "" }))),
+        });
+        reviewDirty = false;
+        rows = await apiJson(`/api/jobs/${job.id}/review`);
+        renderReview();
+        setMsg("reviewMsg", `Saved · ${res.corrected} corrected cues.`, "ok");
+        return true;
+      } catch (e) {
+        setMsg("reviewMsg", e.message, "err");
+        return false;
+      }
+    }
+    $("saveReviewBtn").addEventListener("click", saveReview);
+
+    $("aiReviewBtn").addEventListener("click", async () => {
+      if (!confirm("Run the AI review? It flags likely errors (accuracy, terminology, grammar, style, reading speed) and suggests fixes. Nothing changes until you choose “Use suggestion”.")) return;
+      if (reviewDirty && !(await saveReview())) return;
+      try {
+        job = await apiJson(`/api/jobs/${job.id}/ai-review`, { method: "POST" });
+        renderHeader(); startPolling();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e) { setMsg("reviewMsg", e.message, "err"); }
+    });
+
+    // ---------- header actions ----------
+    $("backBtn").addEventListener("click", () => { if (confirmLeave()) { sourceDirty = reviewDirty = false; location.hash = ""; } });
+    $("deleteBtn").addEventListener("click", async () => {
+      if (!confirm("Delete this job and all its files now?")) return;
+      try {
+        await apiJson(`/api/jobs/${job.id}`, { method: "DELETE" });
+        sourceDirty = reviewDirty = false;
+        location.hash = "";
+      } catch (e) { setMsg("jobMsg", e.message, "err"); }
+    });
+
+    // ---------- wire up ----------
     $("loginBtn").addEventListener("click", doLogin);
     $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
-    $("logoutBtn").addEventListener("click", logout);
+    $("logoutBtn").addEventListener("click", () => { if (confirmLeave()) { sourceDirty = reviewDirty = false; logout(); } });
 
-    // Auto-unlock if we already have a valid password this session.
     (async () => {
-      if (password && await tryLogin(password)) showApp();
+      if (password && await tryLogin(password)) unlocked();
     })();
   </script>
 </body>
