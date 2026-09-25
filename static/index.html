@@ -627,12 +627,6 @@
         $("jobTitle").textContent = "Job not found";
         return;
       }
-      if (job.audio_token) {
-        $("player").src = `/api/jobs/${job.id}/audio?token=${job.audio_token}`;
-        show("player");
-      } else {
-        $("player").removeAttribute("src"); show("player", false);
-      }
       await loadData();
       activeTab = job.downloads.includes("workbook") ? "review" : "source";
       renderJob();
@@ -677,8 +671,21 @@
       ["translateBtn", "saveSourceBtn", "saveReviewBtn", "aiReviewBtn"].forEach((b) => { $(b).disabled = job.busy; });
     }
 
+    // Attach the job's audio to the player. Runs on every render: after an upload the
+    // page opens before the audio exists, and the token only appears once it does.
+    function syncPlayer() {
+      const p = $("player");
+      const url = job.audio_token ? `/api/jobs/${job.id}/audio?token=${job.audio_token}` : "";
+      if ((p.getAttribute("src") || "") !== url) {
+        if (url) p.src = url;
+        else { p.pause(); p.removeAttribute("src"); p.load(); }
+      }
+      show("player", !!url);
+    }
+
     function renderJob() {
       renderHeader();
+      syncPlayer();
       const hasSource = source.length > 0, hasReview = rows.length > 0;
       show("tabs", hasSource);
       document.querySelectorAll(".tab").forEach((t) => {
@@ -767,11 +774,18 @@
 
     function playCue(c, row) {
       const p = $("player");
+      if (!p.getAttribute("src")) { setMsg("sourceMsg", "No audio is available for this job.", "err"); return; }
       if (playingRow) playingRow.classList.remove("playing");
       playingRow = row; row.classList.add("playing");
-      p.currentTime = tsToSec(c.start);
       stopAt = tsToSec(c.end);
-      p.play().catch(() => { /* blocked until the user interacts; the seek still happened */ });
+      // A seek before the file's metadata has loaded can be ignored, so wait for it.
+      const seek = () => { p.currentTime = tsToSec(c.start); };
+      if (p.readyState >= 1) seek(); else p.addEventListener("loadedmetadata", seek, { once: true });
+      p.play().catch((err) => {
+        if (err.name === "AbortError") return;  // another cue was clicked meanwhile
+        row.classList.remove("playing");
+        setMsg("sourceMsg", `Could not play the audio (${err.message}).`, "err");
+      });
     }
     $("player").addEventListener("timeupdate", () => {
       const p = $("player");

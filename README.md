@@ -45,8 +45,7 @@ confidence so the editor can sort and highlight the weakest cues for review.
   ([regions](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/regions)).
 - **Tier:** Standard (S0). The Free (F0) tier has no fast transcription
   ([quotas](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-services-quotas-and-limits)).
-- **Cost:** $0.36 per audio hour in Central India (Azure retail price list), e.g.
-  about $0.16 for a 26-minute discourse. No monthly fee.
+- **Cost:** ₹34.40 ($0.36) per audio hour, billed per second — see [Cost per file](#cost-per-file).
 - **Limits:** under 5 hours and 500 MB per file (uploads are compressed to mono MP3 first).
 - **Optional model:** `AZURE_SPEECH_MODEL=MAI-Transcribe-2` switches to Microsoft's
   newer model, which lists Telugu, on the same resource — it is in *public preview*
@@ -66,6 +65,35 @@ confidence so the editor can sort and highlight the weakest cues for review.
 Jobs and their files are kept **24 hours** after upload (`RETENTION_HOURS`), are
 listed under *Recent jobs*, survive server restarts, and are then deleted
 automatically. A job can also be deleted immediately from its page.
+
+## Cost per file
+
+Measured on 26 Sep 2026 with a real 26.6-minute Telugu discourse (367 cues).
+Prices are Azure's official list prices — the same data as the
+[Speech pricing](https://azure.microsoft.com/en-us/pricing/details/speech/) and
+[Azure OpenAI pricing](https://azure.microsoft.com/en-us/pricing/details/azure-openai/)
+pages, read from the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices)
+because those pages show prices only after sign-in / region selection.
+
+| Step | Azure service (region) | List price | Usage for this file | Cost |
+|---|---|---|---|---|
+| Speech-to-text | AI Speech fast transcription (Central India) | ₹34.40 ($0.36) per audio hour, billed per second | 26.6 min of audio | **₹15.25** ($0.16) |
+| Translation | OpenAI gpt-5, Global Standard (South India) | per 1M tokens: input ₹119.43 ($1.25), output ₹955.46 ($10.00) | 56K input + 71K output tokens, 11 calls, ~4 min | **₹74.72** ($0.78) |
+| AI review *(optional)* | same gpt-5 deployment | same | 119K input + 135K output tokens, 37 calls, ~6 min | **₹142.72** ($1.49) |
+| **Total** | | | | **≈ ₹90 ($0.94)** without AI review · **≈ ₹233 ($2.44)** with it |
+
+- **Scales with audio length:** roughly ₹200 per audio hour without AI review, ₹525 with it.
+- **Reasoning tokens drive the cost:** gpt-5 "thinks" before answering, and that
+  hidden reasoning (83% of translation output, 93% of review output here) is billed as
+  output. Token counts vary a little between runs.
+- **Re-running costs again:** each re-translation or AI review is billed in full.
+  Editing, saving and downloading are free.
+- **No fixed fees:** both Azure resources are pay-per-use, and Render's free plan
+  costs nothing. The Speech Free (F0) tier's 5 hours/month don't cover fast transcription.
+- The price list also shows a *Fast Transcription Promo* meter (₹9.55 / $0.10 per
+  hour, since 1 Sep 2026) without stating who qualifies; the table uses the regular
+  rate. Your Azure invoice shows which meter was billed.
+- Prices change — check the official pages above before budgeting.
 
 ## Project layout
 
